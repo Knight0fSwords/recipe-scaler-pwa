@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recipe Scaler</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6b4c3b">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #faf7f4;
+      color: #3d3d3d;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      color: #6b4c3b;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #888;
+      margin-bottom: 32px;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: #555;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: white;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #6b4c3b;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .row .input-group {
+      flex: 1;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: white;
+      background: #6b4c3b;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    button:active {
+      background: #5a3f32;
+    }
+
+    .result {
+      margin-top: 32px;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      display: none;
+    }
+
+    .result.show {
+      display: block;
+    }
+
+    .result-label {
+      font-size: 0.875rem;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    .result-value {
+      font-size: 2rem;
+      font-weight: 600;
+      color: #6b4c3b;
+    }
+
+    .install-prompt {
+      margin-top: 40px;
+      padding: 16px;
+      background: #f0ebe6;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: #6b4c3b;
+      text-align: center;
+      display: none;
+    }
+
+    .install-prompt.show {
+      display: block;
+    }
+
+    .install-btn {
+      margin-top: 12px;
+      background: #8b6b5b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Recipe Scaler</h1>
+    <p class="subtitle">Scale ingredients up or down</p>
+
+    <div class="input-group">
+      <label for="ingredient">Ingredient amount (e.g., "2 cups flour")</label>
+      <input type="text" id="ingredient" placeholder="2 cups flour">
+    </div>
+
+    <div class="row">
+      <div class="input-group">
+        <label for="original">Original servings</label>
+        <input type="number" id="original" placeholder="4" min="1">
+      </div>
+      <div class="input-group">
+        <label for="target">Target servings</label>
+        <input type="number" id="target" placeholder="6" min="1">
+      </div>
+    </div>
+
+    <button onclick="scale()">Scale it</button>
+
+    <div class="result" id="result">
+      <div class="result-label">Scaled amount</div>
+      <div class="result-value" id="scaled-amount"></div>
+    </div>
+
+    <div class="install-prompt" id="install-prompt">
+      <strong>Install this app</strong>
+      <p>Add Recipe Scaler to your home screen for quick access</p>
+      <button class="install-btn" id="install-btn">Install</button>
+    </div>
+  </div>
+
+  <script>
+    function scale() {
+      const ingredientInput = document.getElementById('ingredient').value.trim();
+      const original = parseFloat(document.getElementById('original').value);
+      const target = parseFloat(document.getElementById('target').value);
+
+      if (!ingredientInput || !original || !target) {
+        alert('Please fill in all fields');
+        return;
+      }
+
+      // Parse the number from the ingredient string
+      const match = ingredientInput.match(/^([\d.\/]+)\s*(.*)$/);
+      if (!match) {
+        alert('Start your ingredient with a number (e.g., "2 cups flour")');
+        return;
+      }
+
+      let amount = match[1];
+      const rest = match[2];
+
+      // Handle fractions like "1/2"
+      if (amount.includes('/')) {
+        const [num, denom] = amount.split('/');
+        amount = parseFloat(num) / parseFloat(denom);
+      } else {
+        amount = parseFloat(amount);
+      }
+
+      const scaled = (amount * target) / original;
+      const scaledDisplay = scaled % 1 === 0 ? scaled : scaled.toFixed(2);
+
+      document.getElementById('scaled-amount').textContent = `${scaledDisplay} ${rest}`;
+      document.getElementById('result').classList.add('show');
+    }
+
+    // PWA install prompt handling
+    let deferredPrompt;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('install-prompt').classList.add('show');
+    });
+
+    document.getElementById('install-btn').addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      document.getElementById('install-prompt').classList.remove('show');
+    });
+
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+</body>
+</html>
